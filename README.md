@@ -9,7 +9,7 @@ This is a **Selenium C# automation framework** that follows the **Page Object Mo
 - **Test Class, Base Class, and POM Class** structure for maintainability.
 - **Data-Driven Testing** using JSON files.
 - **Reusable Methods** for common actions.
-- **QA Playground Demo Site** as the test application.
+- [**QA Playground Demo Site**](https://www.qaplayground.com/practice) as the test application.
 
 ## 📂 Project Structure
 ```
