@@ -34,7 +34,14 @@ namespace QA_PlayGround.POM_Class
             shortWait.Until(ElementToBeClickable(Input_AppendText)).SendKeys(Keys.Tab);
             return this;
         }
-         public Input_Page Enter_AppendNewText_PressTab1(string text)
+        public Input_Page Enter_AppendNewText_PressTab1(string text)
+        {
+            shortWait.Until(ElementToBeClickable(Input_AppendText)).SendKeys(text);
+            shortWait.Until(ElementToBeClickable(Input_AppendText)).SendKeys(Keys.Tab);
+            return this;
+        }
+
+        public Input_Page Enter_AppendNewText_PressTab2(string text)
         {
             shortWait.Until(ElementToBeClickable(Input_AppendText)).SendKeys(text);
             shortWait.Until(ElementToBeClickable(Input_AppendText)).SendKeys(Keys.Tab);
