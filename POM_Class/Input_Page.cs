@@ -12,6 +12,7 @@ namespace QA_PlayGround.POM_Class
         private readonly By InputPage_heading = By.XPath("//h2[text()='Input']");
         private readonly By Input_AnyMovieName = By.XPath("//input[@placeholder='Enter hollywood movie name']");
         private readonly By Input_AppendText = By.Id("appendText");
+        private readonly By Input_InsideText = By.Id("insideText");
 
 
         //Methods
@@ -28,13 +29,21 @@ namespace QA_PlayGround.POM_Class
             el.SendKeys(text);
             return this;
         }
+
         public Input_Page Enter_AppendNewText_PressTab(string text)
         {
             shortWait.Until(ElementToBeClickable(Input_AppendText)).SendKeys(text);
             shortWait.Until(ElementToBeClickable(Input_AppendText)).SendKeys(Keys.Tab);
             return this;
         }
-       
+
+        public string Verify_TextInside_Input()
+        {
+            IWebElement el = shortWait.Until(ElementToBeClickable(Input_InsideText));
+            string e = el.GetAttribute("value");
+            return e;
+        }
+
 
 
     }

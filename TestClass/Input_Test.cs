@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using QA_PlayGround.Base_Class;
+﻿using QA_PlayGround.Base_Class;
 using QA_PlayGround.POM_Class;
 
 namespace QA_PlayGround.TestClass
@@ -25,7 +20,7 @@ namespace QA_PlayGround.TestClass
             Thread.Sleep(3000);
         }
 
-        [Test] 
+        [Test]
         public void AppendText_AndPress_TabKeys()
         {
             homePage = new Home_Page(GetDriver());
@@ -34,6 +29,23 @@ namespace QA_PlayGround.TestClass
                 .NavigateTo_PracticePage()
                 .NavigateTo_InputPage()
                 .Enter_AppendNewText_PressTab("Hello");
+
+            Thread.Sleep(3000);
+        }
+
+        [Test]
+        public void VerifyText_InsideInputField()
+        {
+            homePage = new Home_Page(GetDriver());
+
+            string actaulText = homePage!
+                                  .NavigateTo_PracticePage()
+                                  .NavigateTo_InputPage()
+                                  .Verify_TextInside_Input();
+
+            Console.WriteLine($"Actual text is -{actaulText}");
+
+            Assert.That(actaulText, Is.EqualTo("QA PlayGround"));
 
             Thread.Sleep(3000);
         }
