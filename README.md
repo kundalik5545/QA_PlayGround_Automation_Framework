@@ -14,15 +14,16 @@ This is a **Selenium C# automation framework** that follows the **Page Object Mo
 ## 📂 Project Structure
 ```
 AutomationFramework/
-│-- Tests/                # Test classes with NUnit test cases
-│   ├── LoginTests.cs     # Sample test case for login functionality
-│   ├── RegistrationTests.cs
+│-- TestClass/            # Test classes with NUnit test cases
+│   ├── Input_Tests.cs    # Sample test case for Input page functionality
+│   ├── Button_Tests.cs
 │
-│-- Pages/                # Page Object Model (POM) classes
-│   ├── LoginPage.cs      # Methods for login page interactions
-│   ├── DashboardPage.cs  # Methods for dashboard interactions
+│-- POM_Class/            # Page Object Model (POM) classes
+│   ├── InputPage.cs      # Methods for Input page interactions
+│   ├── DashboardPage.cs  # Methods for Input Page interactions
 │
-│-- Base/                 # Base class to initialize WebDriver
+│-- Base_Class_/          # Base class to initialize WebDriver
+│   ├── BasePage.cs       # Short waits stored to synchronise process
 │   ├── BaseTest.cs       # WebDriver setup and teardown
 │
 │-- TestData/             # JSON files for data-driven testing
@@ -30,8 +31,6 @@ AutomationFramework/
 │
 │-- Utilities/            # Helper classes for common methods
 │   ├── JsonReader.cs     # Reads data from JSON files
-│
-│-- Drivers/              # WebDriver executables (Chrome, Edge, etc.)
 │
 │-- Reports/              # Test execution reports
 │
@@ -43,16 +42,21 @@ AutomationFramework/
 - Install **Visual Studio** with .NET support.
 - Install **Selenium WebDriver** & **NUnit** via NuGet:
   ```sh
-  Install-Package Selenium.WebDriver
   Install-Package NUnit
   Install-Package NUnit3TestAdapter
   Install-Package Newtonsoft.Json
+  Install-Package Selenium.WebDriver
+  Install-Package Selenium.Support
+  Install-Package WebDriverManager
+  Install-Package DotNetSeleniumExtras.WaitHelpers
+  Install-Package Bogus
+  Install-Package Microsoft.Net.Http
   ```
 - Download the appropriate **WebDriver** (ChromeDriver, EdgeDriver, etc.) and place it in the `Drivers` folder.
 
 ### **2. Clone the Repository**
 ```sh
-git clone https://github.com/yourusername/automation-framework.git
+git clone https://github.com/kundalik5545/QA_PlayGround_Automation_Framework.git
 cd automation-framework
 ```
 
@@ -68,63 +72,282 @@ cd automation-framework
 ### **1. Page Object Model (POM)**
 Each webpage has a dedicated class in the `Pages/` folder, encapsulating element locators and methods. Example:
 ```csharp
-public class LoginPage
+using OpenQA.Selenium;
+using QA_PlayGround.Base_Class;
+using static SeleniumExtras.WaitHelpers.ExpectedConditions;
+
+namespace QA_PlayGround.POM_Class
 {
-    private IWebDriver driver;
-    public LoginPage(IWebDriver driver) { this.driver = driver; }
-
-    private IWebElement UsernameField => driver.FindElement(By.Id("username"));
-    private IWebElement PasswordField => driver.FindElement(By.Id("password"));
-    private IWebElement LoginButton => driver.FindElement(By.Id("login"));
-
-    public void Login(string username, string password)
+    public class Input_Page : BasePage
     {
-        UsernameField.SendKeys(username);
-        PasswordField.SendKeys(password);
-        LoginButton.Click();
+        public Input_Page(IWebDriver driver) : base(driver) { }
+
+        //locators
+        private readonly By InputPage_heading = By.XPath("//h2[text()='Input']");
+        private readonly By Input_AnyMovieName = By.XPath("//input[@placeholder='Enter hollywood movie name']");
+        private readonly By Input_AppendText = By.Id("appendText");
+
+
+        //Methods
+        public string InputPage_Heading()
+        {
+            string el = shortWait.Until(ElementIsVisible(InputPage_heading)).Text;
+            return el;
+        }
+
+        public Input_Page Enter_MovieName(string text)
+        {
+            IWebElement el = shortWait.Until(ElementToBeClickable(Input_AnyMovieName));
+            el.Clear();
+            el.SendKeys(text);
+            return this;
+        }
+        public Input_Page Enter_AppendNewText_PressTab(string text)
+        {
+            shortWait.Until(ElementToBeClickable(Input_AppendText)).SendKeys(text);
+            shortWait.Until(ElementToBeClickable(Input_AppendText)).SendKeys(Keys.Tab);
+            return this;
+        }
+       
     }
 }
+
 ```
 
 ### **2. Test Class (NUnit)**
 Test cases are defined in the `Tests/` folder. Example:
 ```csharp
-[TestFixture]
-public class LoginTests : BaseTest
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using QA_PlayGround.Base_Class;
+using QA_PlayGround.POM_Class;
+
+namespace QA_PlayGround.TestClass
 {
-    [Test]
-    public void VerifyLogin()
+    public class Input_Test : BaseTest
     {
-        var loginPage = new LoginPage(driver);
-        loginPage.Login("testuser", "password123");
-        Assert.AreEqual("Dashboard", driver.Title);
+        Home_Page? homePage;
+
+        [Test]
+        public void Verify_EnterMoviewName()
+        {
+            homePage = new Home_Page(GetDriver());
+
+            homePage!
+                .NavigateTo_PracticePage()
+                .NavigateTo_InputPage()
+                .Enter_MovieName("IronMan");
+
+            Thread.Sleep(3000);
+        }
+
+        [Test] 
+        public void AppendText_AndPress_TabKeys()
+        {
+            homePage = new Home_Page(GetDriver());
+
+            homePage!
+                .NavigateTo_PracticePage()
+                .NavigateTo_InputPage()
+                .Enter_AppendNewText_PressTab("Hello");
+
+            Thread.Sleep(3000);
+        }
     }
 }
+
 ```
 
 ### **3. Base Class**
+#### **1. Base Test**
 Handles WebDriver initialization and cleanup.
 ```csharp
-public class BaseTest
+using System.Net.Http;
+using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json.Linq;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Edge;
+using WebDriverManager.DriverConfigs.Impl;
+
+namespace QA_PlayGround.Base_Class
 {
-    protected IWebDriver driver;
-
-    [SetUp]
-    public void Setup()
+    public class BaseTest
     {
-        driver = new ChromeDriver();
-        driver.Manage().Window.Maximize();
-        driver.Navigate().GoToUrl("https://qaplayground.com");
-    }
+        public IWebDriver driver;
+        private readonly IConfiguration _configuration;
+        private string _browserName;
+        private string _baseUrl;
+        private HttpClient httpClient;
 
-    [TearDown]
-    public void Teardown()
-    {
-        driver.Quit();
+        public BaseTest()
+        {
+            LogDetails("🚀-------------------------- New Test Running -----------------------------");
+            LogDetails("Loaded configuration from appsettings.json");
+
+            _configuration = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json")
+                .Build();
+
+            _browserName = _configuration["SeleniumSettings:BrowserName"] ?? "chrome";
+            _baseUrl = _configuration["SeleniumSettings:BaseUrl"] ?? "https://www.qaplayground.com/";
+        }
+
+        [SetUp]
+        public void OpenBrowser()
+        {
+            LogDetails($"Opening Browser - {_browserName}");
+
+            InitBrowser(_browserName);
+
+            if (driver == null)
+            {
+                throw new Exception("Driver initialization failed.");
+            }
+
+            httpClient = new HttpClient();
+
+            driver.Manage().Window.Maximize();
+            LogDetails("Browser Opened and Maximized");
+
+            driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(10);
+            driver.Navigate().GoToUrl(_baseUrl);
+
+            LogDetails($"Website Url entered");
+        }
+
+
+        [TearDown]
+        public void CloseBrowser()
+        {
+            LogDetails("Closing the browser");
+            if (driver != null)
+            {
+                driver.Quit();
+                driver.Dispose(); 
+                httpClient.Dispose();
+            }
+
+            LogDetails("🚀-------------------------- Test Execution Completed -----------------------------");
+        }
+
+        private void InitBrowser(string browserName)
+        {
+            browserName = browserName.ToLower();
+
+            switch (browserName)
+            {
+                case "chrome":
+                    new WebDriverManager.DriverManager().SetUpDriver(new ChromeConfig());
+                    driver = new ChromeDriver();
+                    break;
+
+                case "edge":
+                    new WebDriverManager.DriverManager().SetUpDriver(new EdgeConfig());
+                    driver = new EdgeDriver();
+                    break;
+
+                default:
+                    throw new ArgumentException($"Unsupported browser: {browserName}");
+            }
+        }
+
+        protected IWebDriver GetDriver()
+        {
+            return driver;
+        }
+
+        public static string GetFilePath(string folderName, string fileName)
+        {
+            string basePath = Directory.GetCurrentDirectory();
+            LogDetails($"Base path of file is - {basePath}");
+
+            string filePath = Path.Combine(basePath, folderName, fileName);
+
+            LogDetails("Checking file is exist or not");
+            if (File.Exists(filePath))
+            {
+                LogDetails($"File found: {filePath}");
+                return filePath;
+            }
+            else
+            {
+                throw new FileNotFoundException($"File '{fileName}' not found in '{folderName}'");
+            }
+
+        }
+
+        public static string GetFilePath2(string folderName, string fileName)
+        {
+            string path_BaseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+
+            string path_ProjectDirectory = Directory.GetParent(path_BaseDirectory)!.Parent!.Parent!.Parent!.FullName;
+
+            string path_GivenFolder = Path.Combine(path_ProjectDirectory, folderName);
+
+            string path_FileName = Path.Combine(path_GivenFolder, fileName);
+
+            return path_FileName;
+        }
+
+        public static JObject JsonFileReader(string fileLocation)
+        {
+            var JsonData = File.ReadAllText(fileLocation);
+            var testData = JObject.Parse(JsonData);
+
+            return testData;
+        }
+
+
+        public static void LogDetails(string Message)
+        {
+            TestContext.Progress.WriteLine($"{Message}");
+        }
+
+
+        public async Task CheckLink(string url)
+        {
+            try
+            {
+                HttpResponseMessage response = await httpClient.GetAsync(url);
+                LogDetails($"Checked url response - {response.StatusCode}");
+                Assert.IsTrue(response.IsSuccessStatusCode, $"Broken link: {url} - Status Code: {response.StatusCode}");
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail($"Error checking link: {url} - Exception: {ex.Message}");
+            }
+        }
     }
 }
-```
 
+```
+#### **2. Base Page**
+```csharp
+using OpenQA.Selenium;
+using OpenQA.Selenium.Support.UI;
+
+namespace QA_PlayGround.Base_Class
+{
+    public class BasePage
+    {
+        protected IWebDriver driver;
+        protected WebDriverWait shortWait;
+        protected WebDriverWait longWait;
+
+        public BasePage(IWebDriver driver)
+        {
+            this.driver = driver;
+            shortWait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
+            longWait = new WebDriverWait(driver, TimeSpan.FromSeconds(50));
+        }
+    }
+
+}
+```
 ### **4. Data-Driven Testing using JSON**
 Test data is stored in a JSON file (`testdata.json`). Example:
 ```json
@@ -135,14 +358,14 @@ Test data is stored in a JSON file (`testdata.json`). Example:
 ```
 To read JSON data in C#:
 ```csharp
-public class JsonReader
-{
-    public static JObject ReadJson()
+public static JObject JsonFileReader(string fileLocation)
     {
-        string jsonText = File.ReadAllText("TestData/testdata.json");
-        return JObject.Parse(jsonText);
+        var JsonData = File.ReadAllText(fileLocation);
+        var testData = JObject.Parse(JsonData);
+
+        return testData;
     }
-}
+
 ```
 
 ## 📊 Test Reporting
