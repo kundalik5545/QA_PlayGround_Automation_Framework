@@ -1,0 +1,14 @@
+﻿{
+    "TC_01_BasicDetails": [
+        {
+            "baseUrl": "https://www.qaplayground.com/",
+            "browser": "Chrome"
+        }
+    ],
+
+    "TC_01_Verify_HomePageTitle": [
+        {
+            "pageTitle": "Master Automation Testing With"
+        }
+    ]
+}
