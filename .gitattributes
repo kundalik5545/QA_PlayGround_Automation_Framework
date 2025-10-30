@@ -61,3 +61,10 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+###############################################################################
+# diff behavior for C# files in Utilities folder
+#
+# Treat C# files in the Utilities folder as text for diffing purposes.
+###############################################################################
+Utilities/ScreenshotHelper.cs text
